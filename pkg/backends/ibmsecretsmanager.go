@@ -686,7 +686,7 @@ func (i *IBMSecretsManager) GetSecrets(path string, version string, annotations 
 // This requires listing the secrets of the group to obtain the id, and then using that to grab the one secret's payload
 
 func (i *IBMSecretsManager) GetIndividualSecret(kvpath, secretRef, version string, annotations map[string]string) (interface{}, error) {
-	secretType, groupId, secretName, err := parsePath(kvpath)
+	secretType, group, secretName, err := parsePath(kvpath)
 	if err != nil {
 		return nil, fmt.Errorf("Path is not in the correct format (ibmcloud/$TYPE/secrets/groups/$GROUP_ID) for IBM Secrets Manager: %s", kvpath)
 	}
@@ -701,11 +701,15 @@ func (i *IBMSecretsManager) GetIndividualSecret(kvpath, secretRef, version strin
 		secretKey = secretRef
 	}
 	var groupName string
-	if GroupId.MatchString(groupId) {
-       groupName,err = i.resolveGroupName(groupId)
+	if GroupId.MatchString(group) {
+       groupName,err = i.resolveGroupName(group)
 	   if err != nil {
 		return nil, err
 	}
+	} else if  group == "default" {
+		return group, nil
+	} else {
+		groupName = group
 	}
   // Commented out just for testing, would implement it if the whole approach is worth
 	// ckey := cacheKey{groupId, secretType}
@@ -738,10 +742,10 @@ func (i *IBMSecretsManager) GetIndividualSecret(kvpath, secretRef, version strin
 	}
 
 	// Call IBM SDK to get the secret
-	utils.VerboseToStdErr("IBM Cloud Secrets Manager get secret by name and type: %s of type %s from group %s (name: %s)", secretName, secretType, groupId, groupName)
+	utils.VerboseToStdErr("IBM Cloud Secrets Manager get secret by name and type: %s of type %s from group %s (name: %s)", secretName, secretType, groupName, groupName)
 	secretRes, httpResponse, err := i.Client.GetSecretByNameType(options)
 	if err != nil {
-		return nil, fmt.Errorf("Could not retrieve secret %s of type %s from group %s: %s", secretName, secretType, groupId, err)
+		return nil, fmt.Errorf("Could not retrieve secret %s of type %s from group %s: %s", secretName, secretType, groupName, err)
 	}
 	if secretRes == nil {
 		return nil, fmt.Errorf("Could not retrieve secret %s of type %s after %d retries, statuscode %d", secretName, secretType, types.IBMMaxRetries, httpResponse.GetStatusCode())
