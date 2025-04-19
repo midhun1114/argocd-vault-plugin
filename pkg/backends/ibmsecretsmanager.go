@@ -568,9 +568,8 @@ func (i *IBMSecretsManager) resolveGroup(group string) (string, error) {
 		return groupId, nil
 	}
 }
+//returns the group name using group id
 func (i *IBMSecretsManager) resolveGroupName(group string) (string, error) {
-	// no need to resolve default or groupIds
-	// list groups
 	if len(i.secretGroups) == 0 {
 		opts := &ibmsm.ListSecretGroupsOptions{}
 		secretGroupCollection, _, err := i.Client.ListSecretGroups(opts)
@@ -582,7 +581,7 @@ func (i *IBMSecretsManager) resolveGroupName(group string) (string, error) {
 		}
 	}
 
-	// look up group id for group name
+	// look up group name for group id
 	groupName := i.secretGroups[group]
 	if groupName == "" {
 		return "", fmt.Errorf("No such secret group %s", group)
@@ -685,94 +684,6 @@ func (i *IBMSecretsManager) GetSecrets(path string, version string, annotations 
 
 // GetIndividualSecret will get the specific secret (placeholder) from the SM backend
 // This requires listing the secrets of the group to obtain the id, and then using that to grab the one secret's payload
-// func (i *IBMSecretsManager) GetIndividualSecret(kvpath, secretRef, version string, annotations map[string]string) (interface{}, error) {
-// 	secretType, group, secretName, err := parsePath(kvpath)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("Path is not in the correct format (ibmcloud/$TYPE/secrets/groups/$GROUP) for IBM Secrets Manager: %s", kvpath)
-// 	}
-// 	if secretType == "arbitrary" && secretName != "" {
-// 		return nil, fmt.Errorf("The 'ibmcloud/$TYPE/secrets/groups/$GROUP/$SECRET' path format is not supported for arbitrary secrets: %s", kvpath)
-// 	}
-
-// 	groupId, err := i.resolveGroup(group)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	var secretKey string
-// 	if secretName == "" {
-// 		secretName = secretRef
-// 	} else {
-// 		secretKey = secretRef
-// 	}
-
-// 	ckey := cacheKey{groupId, secretType}
-
-// 	// Bypass the cache when explicit version is requested
-// 	// If we have already retrieved all the secrets for the requested secret's group and type, we have a cache hit
-// 	if version == "" && i.retrievedAllSecrets[ckey] {
-// 		secretData := i.getSecretsCache[ckey][secretName]
-// 		if secretKey != "" {
-// 			secretValue, ok := secretData.(map[string]interface{})
-// 			if ok {
-// 				return secretValue[secretKey], nil
-// 			} else {
-// 				return nil, nil
-// 			}
-// 		} else {
-// 			return secretData, nil
-// 		}
-// 	}
-
-// 	// Grab the *ibmsm.SecretMetadata corresponding to the secret
-// 	secretResources, err := i.listSecretsInGroup(groupId, secretType)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	secret := secretResources[secretName]
-// 	if secret == nil {
-
-// 		// Allow the replacement code to handle this missing secret
-// 		return nil, nil
-// 	}
-
-// 	// Retrieve the secret's payload
-// 	secrets := make(map[string]interface{})
-// 	secretResult := make(chan map[string]interface{})
-// 	var wg sync.WaitGroup
-// 	go i.getSecret(secret, version, secretResult, &wg)
-// 	wg.Add(1)
-// 	go func() {
-// 		wg.Wait()
-// 		close(secretResult)
-// 	}()
-
-// 	err = storeSecret(&secrets, <-secretResult)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	secretData := secrets[secretName]
-// 	if secretKey != "" {
-// 		secretValue, ok := secretData.(map[string]interface{})
-// 		if ok {
-// 			return secretValue[secretKey], nil
-// 		} else {
-// 			return nil, nil
-// 		}
-// 	} else {
-// 		return secretData, nil
-// 	}
-// }
-// GetSecretByNameTypeAndRef retrieves a specific secret directly using the GetSecretByNameType
-// function from the IBM Secrets Manager Go client instead of listing all secrets in a group.
-// This is more efficient for retrieving individual secrets.
-// GetSecretByNameTypeAndRef retrieves a specific secret directly using the GetSecretByNameType
-// function from the IBM Secrets Manager Go client instead of listing all secrets in a group.
-// This is more efficient for retrieving individual secrets.
-// GetSecretByNameTypeAndRef retrieves a specific secret directly using the GetSecretByNameType
-// function from the IBM Secrets Manager Go client instead of listing all secrets in a group.
-// This is more efficient for retrieving individual secrets.
 
 func (i *IBMSecretsManager) GetIndividualSecret(kvpath, secretRef, version string, annotations map[string]string) (interface{}, error) {
 	secretType, groupId, secretName, err := parsePath(kvpath)
@@ -796,7 +707,7 @@ func (i *IBMSecretsManager) GetIndividualSecret(kvpath, secretRef, version strin
 		return nil, err
 	}
 	}
-
+  // Commented out just for testing, would implement it if the whole approach is worth
 	// ckey := cacheKey{groupId, secretType}
 
 	// Try the cache first if no specific version is requested
@@ -859,20 +770,4 @@ func (i *IBMSecretsManager) GetIndividualSecret(kvpath, secretRef, version strin
 		secretData = secretPayload[secretKey]
 	}
 	return secretData, nil
-	// Update cache
-	// i.getSecretsCacheLock.Lock()
-	// i.writeSecretToCache(groupId, secretType, secretName, secretData)
-	// i.getSecretsCacheLock.Unlock()
-
-	// // Return the requested value
-	// if secretKey != "" {
-	// 	secretValue, ok := secretData.(map[string]interface{})
-	// 	if ok {
-	// 		return secretValue[secretKey], nil
-	// 	} else {
-	// 		return nil, nil
-	// 	}
-	// } else {
-	// 	return secretData, nil
-	// }
 }
